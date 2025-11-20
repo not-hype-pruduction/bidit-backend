@@ -59,7 +59,7 @@ func (d *deal) createPBN(north, south, east, west int32) (string, error) {
 	sIndex := getStartIndex(d.Dealer)
 
 	for i := range 4 {
-		switch peoples[i+sIndex%4] {
+		switch peoples[(i+sIndex)%4] {
 		case "N":
 			str, err := gPBN.getNeedPlayer(north)
 			if err != nil {
