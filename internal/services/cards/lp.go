@@ -81,7 +81,6 @@ func generateCardsWithPoints(
 	return nil, IMPOSSIBLECARDCOMBINATION
 }
 
-// randomRange создает случайную перестановку чисел от min до max включительно
 func randomRange(min, max int8) []int8 {
 	size := max - min + 1
 	result := make([]int8, size)
@@ -90,7 +89,6 @@ func randomRange(min, max int8) []int8 {
 		result[i] = min + i
 	}
 
-	// Тасуем массив (Fisher-Yates shuffle)
 	for i := size - 1; i > 0; i-- {
 		j := int8(rand.Intn(int(i + 1)))
 		result[i], result[j] = result[j], result[i]

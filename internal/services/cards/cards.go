@@ -44,8 +44,6 @@ func (c *Cards) GenerateHands(
 		return "", err
 	}
 
-	c.log.Debug("", *cards)
-
 	deal := generateDeal(*cards, dealer)
 
 	return deal.createPBN(int32(north), int32(south), int32(east), int32(west))
