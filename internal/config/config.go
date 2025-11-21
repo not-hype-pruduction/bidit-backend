@@ -9,30 +9,33 @@ import (
 )
 
 type Config struct {
-	Env    string `yaml:"env" env-default:"local"`
-	Random bool
+	Env    string     `yaml:"env" env:"ENV" env-default:"local"`
+	Random bool       `yaml:"random" env:"RANDOM" env-default:"false"`
 	GPRC   GRPCConfig `yaml:"grpc"`
 }
 
 type GRPCConfig struct {
-	Port    int           `yaml:"port"`
-	Timeout time.Duration `yaml:"timeout"`
+	Port    int           `yaml:"port" env:"GRPC_PORT"`
+	Timeout time.Duration `yaml:"timeout" env:"GRPC_TIMEOUT"`
 }
 
 func MustLoad() *Config {
 	configPath := fetchConfigPath()
-	if configPath == "" {
-		panic("config path is empty")
-	}
-
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		panic("config file does not exist: " + configPath)
-	}
 
 	var cfg Config
 
-	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
-		panic("config path is empty: " + err.Error())
+	if configPath != "" {
+		if _, err := os.Stat(configPath); os.IsNotExist(err) {
+			panic("config file does not exist: " + configPath)
+		}
+
+		if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
+			panic("failed to read config: " + err.Error())
+		}
+	} else {
+		if err := cleanenv.ReadEnv(&cfg); err != nil {
+			panic("failed to read config from env: " + err.Error())
+		}
 	}
 
 	return &cfg

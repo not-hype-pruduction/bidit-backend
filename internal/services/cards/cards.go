@@ -13,14 +13,12 @@ var (
 )
 
 type Cards struct {
-	log    *slog.Logger
-	random bool
+	log *slog.Logger
 }
 
-func New(log *slog.Logger, random bool) Cards {
+func New(log *slog.Logger) Cards {
 	return Cards{
-		log:    log,
-		random: random,
+		log: log,
 	}
 }
 

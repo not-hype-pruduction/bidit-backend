@@ -14,10 +14,9 @@ type App struct {
 func New(
 	log *slog.Logger,
 	grpcPort int,
-	random bool,
 ) *App {
 
-	cardsService := cards.New(log, random)
+	cardsService := cards.New(log)
 
 	grpcApp := grpcapp.New(log, &cardsService, grpcPort)
 

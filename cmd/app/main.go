@@ -15,7 +15,7 @@ func main() {
 
 	log := logger.SetupLogger(cfg.Env)
 
-	application := app.New(log, cfg.GPRC.Port, cfg.Random)
+	application := app.New(log, cfg.GPRC.Port)
 
 	application.GRPCServer.MustRun()
 
