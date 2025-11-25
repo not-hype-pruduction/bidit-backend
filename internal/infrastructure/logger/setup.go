@@ -1,3 +1,4 @@
+// Package logger contains logger setup and configuration.
 package logger
 
 import (
@@ -11,6 +12,7 @@ const (
 	envProd  = "prod"
 )
 
+// SetupLogger creates a configured slog.Logger based on the environment.
 func SetupLogger(env string) *slog.Logger {
 	var log *slog.Logger
 
@@ -26,6 +28,12 @@ func SetupLogger(env string) *slog.Logger {
 		)
 
 	case envProd:
+		log = slog.New(
+			slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
+		)
+
+	default:
+		// Default to info level for unknown environments
 		log = slog.New(
 			slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
 		)

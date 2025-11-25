@@ -1,20 +1,18 @@
+// Package cards contains the domain entities and business logic for card generation.
 package cards
 
 import (
 	"math/rand"
 )
 
-type generatedCards struct {
-	A, K, Q, J     int8
-	A_, K_, Q_, J_ int8
-}
-
-func generateCardsWithPoints(
+// GenerateCardsWithPoints generates cards with specified point ranges for my hand and partner's hand.
+// Points are calculated using the standard bridge point system (A=4, K=3, Q=2, J=1).
+func GenerateCardsWithPoints(
 	myPointsMin int32,
 	myPointsMax int32,
 	partnerPointsMin int32,
 	partnerPointsMax int32,
-) (*generatedCards, error) {
+) (*GeneratedCards, error) {
 
 	aRange := randomRange(0, 4)
 	kRange := randomRange(0, 4)
@@ -65,7 +63,7 @@ func generateCardsWithPoints(
 										continue
 									}
 
-									return &generatedCards{
+									return &GeneratedCards{
 										A: a, K: k, Q: q, J: j,
 										A_: a_, K_: k_, Q_: q_, J_: j_,
 									}, nil
@@ -78,9 +76,10 @@ func generateCardsWithPoints(
 		}
 	}
 
-	return nil, IMPOSSIBLECARDCOMBINATION
+	return nil, ErrImpossibleCardCombination
 }
 
+// randomRange generates a shuffled slice of integers from min to max inclusive.
 func randomRange(min, max int8) []int8 {
 	size := max - min + 1
 	result := make([]int8, size)

@@ -1,44 +1,49 @@
+// Package cards contains the domain entities and business logic for card generation.
 package cards
 
 import (
-	"fmt"
 	"math/rand"
+	"strings"
 )
 
-func generateDeal(gCards generatedCards, dealer string) *deal {
-	var resDeal deal
+// order defines the ranking order of cards from highest to lowest.
+var order = []string{"A", "K", "Q", "J", "T", "9", "8", "7", "6", "5", "4", "3", "2"}
+
+// GenerateDeal creates a complete deal from generated cards and a dealer position.
+func GenerateDeal(gCards GeneratedCards, dealer string) *Deal {
+	var resDeal Deal
 
 	resDeal.Dealer = dealer
 
-	aces := []card{
+	aces := []Card{
 		{Rank: "A", Suit: "S"},
 		{Rank: "A", Suit: "H"},
 		{Rank: "A", Suit: "D"},
 		{Rank: "A", Suit: "C"},
 	}
 
-	kings := []card{
+	kings := []Card{
 		{Rank: "K", Suit: "S"},
 		{Rank: "K", Suit: "H"},
 		{Rank: "K", Suit: "D"},
 		{Rank: "K", Suit: "C"},
 	}
 
-	queens := []card{
+	queens := []Card{
 		{Rank: "Q", Suit: "S"},
 		{Rank: "Q", Suit: "H"},
 		{Rank: "Q", Suit: "D"},
 		{Rank: "Q", Suit: "C"},
 	}
 
-	jacks := []card{
+	jacks := []Card{
 		{Rank: "J", Suit: "S"},
 		{Rank: "J", Suit: "H"},
 		{Rank: "J", Suit: "D"},
 		{Rank: "J", Suit: "C"},
 	}
 
-	var numberCards = []card{
+	var numberCards = []Card{
 		// Spades
 		{Rank: "2", Suit: "S"},
 		{Rank: "3", Suit: "S"},
@@ -153,17 +158,16 @@ func generateDeal(gCards generatedCards, dealer string) *deal {
 	}
 
 	// Numbers for all players
-	assignCards(&resDeal.My, numberCards, &numbersIndex, numbersIndex+13-resDeal.My.getAmountOfCards())
-	assignCards(&resDeal.Partner, numberCards, &numbersIndex, numbersIndex+13-resDeal.Partner.getAmountOfCards())
-	assignCards(&resDeal.Player1, numberCards, &numbersIndex, numbersIndex+13-resDeal.Player1.getAmountOfCards())
-	assignCards(&resDeal.Player2, numberCards, &numbersIndex, numbersIndex+13-resDeal.Player2.getAmountOfCards())
-
-	fmt.Println(resDeal)
+	assignCards(&resDeal.My, numberCards, &numbersIndex, numbersIndex+13-resDeal.My.GetAmountOfCards())
+	assignCards(&resDeal.Partner, numberCards, &numbersIndex, numbersIndex+13-resDeal.Partner.GetAmountOfCards())
+	assignCards(&resDeal.Player1, numberCards, &numbersIndex, numbersIndex+13-resDeal.Player1.GetAmountOfCards())
+	assignCards(&resDeal.Player2, numberCards, &numbersIndex, numbersIndex+13-resDeal.Player2.GetAmountOfCards())
 
 	return &resDeal
 }
 
-func assignCards(gHand *hand, cards []card, index *int, count int) {
+// assignCards distributes cards from a deck to a hand.
+func assignCards(gHand *Hand, cards []Card, index *int, count int) {
 	for ; *index < count && *index < len(cards); *index++ {
 		tmp := cards[*index]
 
@@ -181,4 +185,130 @@ func assignCards(gHand *hand, cards []card, index *int, count int) {
 			gHand.Clubs = append(gHand.Clubs, tmp)
 		}
 	}
+}
+
+// CreatePBN generates a PBN (Portable Bridge Notation) string from a deal.
+func (d *Deal) CreatePBN(north, south, east, west int32) (string, error) {
+	var res strings.Builder
+	res.WriteString(d.Dealer)
+	res.WriteString(":")
+
+	gPBN := PBN{
+		My:      HandToPBNFormat(&d.My),
+		Partner: HandToPBNFormat(&d.Partner),
+		Player1: HandToPBNFormat(&d.Player1),
+		Player2: HandToPBNFormat(&d.Player2),
+	}
+
+	peoples := []string{"N", "E", "S", "W"}
+
+	sIndex := GetStartIndex(d.Dealer)
+
+	for i := range 4 {
+		switch peoples[(i+sIndex)%4] {
+		case "N":
+			str, err := gPBN.GetNeedPlayer(north)
+			if err != nil {
+				return "", err
+			}
+
+			res.WriteString(str)
+
+		case "E":
+			str, err := gPBN.GetNeedPlayer(east)
+			if err != nil {
+				return "", err
+			}
+
+			res.WriteString(str)
+
+		case "S":
+			str, err := gPBN.GetNeedPlayer(south)
+			if err != nil {
+				return "", err
+			}
+
+			res.WriteString(str)
+
+		case "W":
+			str, err := gPBN.GetNeedPlayer(west)
+			if err != nil {
+				return "", err
+			}
+
+			res.WriteString(str)
+		}
+
+		if i < 3 {
+			res.WriteString(" ")
+		}
+	}
+
+	return res.String(), nil
+}
+
+// GetNeedPlayer returns the PBN string for a specific player position.
+func (p *PBN) GetNeedPlayer(player int32) (string, error) {
+	switch player {
+	case 1:
+		return p.My, nil
+
+	case 2:
+		return p.Partner, nil
+
+	case 3:
+		return p.Player1, nil
+
+	case 4:
+		return p.Player2, nil
+
+	default:
+		return "", ErrBadPlayerPosition
+	}
+}
+
+// GetStartIndex returns the starting index based on dealer position.
+func GetStartIndex(position string) int {
+	switch position {
+	case "N":
+		return 0
+	case "E":
+		return 1
+	case "S":
+		return 2
+	case "W":
+		return 3
+	}
+
+	return 0
+}
+
+// HandToPBNFormat converts a hand to PBN format string.
+func HandToPBNFormat(hand *Hand) string {
+	var res strings.Builder
+
+	res.WriteString(CardsToPBNFormat(hand.Spades))
+	res.WriteString(".")
+	res.WriteString(CardsToPBNFormat(hand.Hearts))
+	res.WriteString(".")
+	res.WriteString(CardsToPBNFormat(hand.Diamonds))
+	res.WriteString(".")
+	res.WriteString(CardsToPBNFormat(hand.Clubs))
+
+	return res.String()
+}
+
+// CardsToPBNFormat converts a slice of cards to PBN format string.
+func CardsToPBNFormat(cards []Card) string {
+	var res strings.Builder
+
+	for _, rank := range order {
+		for _, c := range cards {
+			if c.Rank == rank {
+				res.WriteString(c.Rank)
+			}
+		}
+	}
+
+	return res.String()
 }
