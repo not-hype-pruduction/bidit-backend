@@ -2,15 +2,15 @@ package cards
 
 import "testing"
 
-func Test_cardsToPBNFormat(t *testing.T) {
+func Test_CardsToPBNFormat(t *testing.T) {
 	tests := []struct {
 		name  string
-		cards []card
+		cards []Card
 		want  string
 	}{
 		{
 			name: "simple",
-			cards: []card{
+			cards: []Card{
 				{Rank: "A", Suit: "S"},
 				{Rank: "T", Suit: "S"},
 				{Rank: "6", Suit: "S"},
@@ -19,7 +19,7 @@ func Test_cardsToPBNFormat(t *testing.T) {
 		},
 		{
 			name: "reverse",
-			cards: []card{
+			cards: []Card{
 				{Rank: "6", Suit: "S"},
 				{Rank: "T", Suit: "S"},
 				{Rank: "A", Suit: "S"},
@@ -28,7 +28,7 @@ func Test_cardsToPBNFormat(t *testing.T) {
 		},
 		{
 			name: "full",
-			cards: []card{
+			cards: []Card{
 				{Rank: "2", Suit: "S"},
 				{Rank: "3", Suit: "S"},
 				{Rank: "4", Suit: "S"},
@@ -48,33 +48,33 @@ func Test_cardsToPBNFormat(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := cardsToPBNFormat(tt.cards)
+			got := CardsToPBNFormat(tt.cards)
 			if got != tt.want {
-				t.Errorf("cardsToPBNFormat() = %v, want %v", got, tt.want)
+				t.Errorf("CardsToPBNFormat() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func Test_handToPBNFormat(t *testing.T) {
+func Test_HandToPBNFormat(t *testing.T) {
 	tests := []struct {
 		name string
-		hand *hand
+		hand *Hand
 		want string
 	}{
 		{
-			name: "correst position",
-			hand: &hand{
-				Spades: []card{
+			name: "correct position",
+			hand: &Hand{
+				Spades: []Card{
 					{Rank: "A", Suit: "S"},
 				},
-				Hearts: []card{
+				Hearts: []Card{
 					{Rank: "K", Suit: "H"},
 				},
-				Diamonds: []card{
+				Diamonds: []Card{
 					{Rank: "Q", Suit: "D"},
 				},
-				Clubs: []card{
+				Clubs: []Card{
 					{Rank: "J", Suit: "C"},
 				},
 			},
@@ -83,10 +83,10 @@ func Test_handToPBNFormat(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := handToPBNFormat(tt.hand)
+			got := HandToPBNFormat(tt.hand)
 
 			if got != tt.want {
-				t.Errorf("handToPBNFormat() = %v, want %v", got, tt.want)
+				t.Errorf("HandToPBNFormat() = %v, want %v", got, tt.want)
 			}
 		})
 	}

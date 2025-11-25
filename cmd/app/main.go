@@ -6,8 +6,8 @@ import (
 	"syscall"
 
 	"github.com/not-hype-pruduction/bridge-backend/internal/app"
-	"github.com/not-hype-pruduction/bridge-backend/internal/app/logger"
-	"github.com/not-hype-pruduction/bridge-backend/internal/config"
+	"github.com/not-hype-pruduction/bridge-backend/internal/infrastructure/config"
+	"github.com/not-hype-pruduction/bridge-backend/internal/infrastructure/logger"
 )
 
 func main() {
@@ -16,8 +16,6 @@ func main() {
 	log := logger.SetupLogger(cfg.Env)
 
 	application := app.New(log, cfg.GPRC.Port)
-
-	application.GRPCServer.MustRun()
 
 	go func() {
 		application.GRPCServer.MustRun()
@@ -30,5 +28,4 @@ func main() {
 
 	application.GRPCServer.Stop()
 	log.Info("Gracefully stopped")
-
 }

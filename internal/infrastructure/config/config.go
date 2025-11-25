@@ -1,3 +1,4 @@
+// Package config contains application configuration loading logic.
 package config
 
 import (
@@ -8,17 +9,20 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
+// Config holds the application configuration.
 type Config struct {
 	Env    string     `yaml:"env" env:"ENV" env-default:"local"`
 	Random bool       `yaml:"random" env:"RANDOM" env-default:"false"`
 	GPRC   GRPCConfig `yaml:"grpc"`
 }
 
+// GRPCConfig holds gRPC server configuration.
 type GRPCConfig struct {
 	Port    int           `yaml:"port" env:"GRPC_PORT"`
 	Timeout time.Duration `yaml:"timeout" env:"GRPC_TIMEOUT"`
 }
 
+// MustLoad loads the configuration or panics on error.
 func MustLoad() *Config {
 	configPath := fetchConfigPath()
 
@@ -41,6 +45,7 @@ func MustLoad() *Config {
 	return &cfg
 }
 
+// fetchConfigPath retrieves the config file path from flag or environment.
 func fetchConfigPath() string {
 	var res string
 
