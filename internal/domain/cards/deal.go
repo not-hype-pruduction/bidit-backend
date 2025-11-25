@@ -2,7 +2,6 @@
 package cards
 
 import (
-	"fmt"
 	"math/rand"
 	"strings"
 )
@@ -163,8 +162,6 @@ func GenerateDeal(gCards GeneratedCards, dealer string) *Deal {
 	assignCards(&resDeal.Partner, numberCards, &numbersIndex, numbersIndex+13-resDeal.Partner.GetAmountOfCards())
 	assignCards(&resDeal.Player1, numberCards, &numbersIndex, numbersIndex+13-resDeal.Player1.GetAmountOfCards())
 	assignCards(&resDeal.Player2, numberCards, &numbersIndex, numbersIndex+13-resDeal.Player2.GetAmountOfCards())
-
-	fmt.Println(resDeal)
 
 	return &resDeal
 }

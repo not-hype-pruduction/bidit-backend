@@ -31,6 +31,12 @@ func SetupLogger(env string) *slog.Logger {
 		log = slog.New(
 			slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
 		)
+
+	default:
+		// Default to info level for unknown environments
+		log = slog.New(
+			slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
+		)
 	}
 
 	return log
