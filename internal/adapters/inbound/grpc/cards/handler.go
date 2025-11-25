@@ -1,5 +1,5 @@
-// Package grpc contains the gRPC inbound adapter.
-package grpc
+// Package cards contains the gRPC handler for card generation service.
+package cards
 
 import (
 	"context"
@@ -37,7 +37,7 @@ func (h *Handler) GenerateHands(
 	in *cardsv1.GenerateHandsRequest,
 ) (*cardsv1.GenerateHandsResponse, error) {
 	// Validate request
-	if err := validateGenerateHandsRequest(in); err != nil {
+	if err := Validate(in); err != nil {
 		return nil, err
 	}
 
@@ -55,19 +55,4 @@ func (h *Handler) GenerateHands(
 	}
 
 	return ToGenerateHandsResponse(pbn), nil
-}
-
-// validateGenerateHandsRequest validates the gRPC request.
-func validateGenerateHandsRequest(in *cardsv1.GenerateHandsRequest) error {
-	if in.MyPointsMin > in.MyPointsMax ||
-		in.PartnerPointsMin > in.PartnerPointsMax ||
-		in.MyPointsMax+in.MyPointsMax > 40 {
-		return status.Error(codes.InvalidArgument, cards.ErrPointsInvalid.Error())
-	}
-
-	if in.Delaer != "S" && in.Delaer != "W" && in.Delaer != "N" && in.Delaer != "E" {
-		return status.Error(codes.InvalidArgument, cards.ErrDealerInvalid.Error())
-	}
-
-	return nil
 }

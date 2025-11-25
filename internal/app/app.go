@@ -4,7 +4,9 @@ package app
 import (
 	"log/slog"
 
+	grpcAdapter "github.com/not-hype-pruduction/bridge-backend/internal/adapters/inbound/grpc"
 	grpcadapter "github.com/not-hype-pruduction/bridge-backend/internal/adapters/inbound/grpc"
+	cardsHandler "github.com/not-hype-pruduction/bridge-backend/internal/adapters/inbound/grpc/cards"
 	loggeradapter "github.com/not-hype-pruduction/bridge-backend/internal/adapters/outbound/logger"
 	"github.com/not-hype-pruduction/bridge-backend/internal/application/usecases"
 )
@@ -26,10 +28,15 @@ func New(
 	generateHandsUseCase := usecases.NewGenerateHandsUseCase(loggerAdapter)
 
 	// Create gRPC handler
-	grpcHandler := grpcadapter.NewHandler(generateHandsUseCase)
+	cardsHandler := cardsHandler.NewHandler(generateHandsUseCase)
+
+	// Create gRPC regestry
+	grpcRegistry := grpcAdapter.NewRegistry(
+		cardsHandler,
+	)
 
 	// Create gRPC server
-	grpcServer := grpcadapter.NewServer(log, grpcHandler, grpcPort)
+	grpcServer := grpcadapter.NewServer(log, grpcRegistry, grpcPort)
 
 	return &App{
 		GRPCServer: grpcServer,

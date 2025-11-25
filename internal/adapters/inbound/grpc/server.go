@@ -1,4 +1,3 @@
-// Package grpc contains the gRPC inbound adapter.
 package grpc
 
 import (
@@ -22,7 +21,7 @@ type Server struct {
 }
 
 // NewServer creates a new gRPC server with the provided configuration.
-func NewServer(log *slog.Logger, handler *Handler, port int) *Server {
+func NewServer(log *slog.Logger, registry *Registry, port int) *Server {
 	loggingOpts := []logging.Option{
 		logging.WithLogOnEvents(
 			logging.PayloadReceived, logging.PayloadSent,
@@ -32,7 +31,6 @@ func NewServer(log *slog.Logger, handler *Handler, port int) *Server {
 	recoveryOpts := []recovery.Option{
 		recovery.WithRecoveryHandler(func(p any) (err error) {
 			log.Error("Recovered from panic", slog.Any("panic", p))
-
 			return status.Errorf(codes.Internal, "internal error")
 		}),
 	}
@@ -42,7 +40,7 @@ func NewServer(log *slog.Logger, handler *Handler, port int) *Server {
 		logging.UnaryServerInterceptor(InterceptorLogger(log), loggingOpts...),
 	))
 
-	handler.Register(gRPCServer)
+	registry.RegisterAll(gRPCServer)
 
 	return &Server{
 		log:        log,

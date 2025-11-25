@@ -1,5 +1,5 @@
-// Package grpc contains the gRPC inbound adapter.
-package grpc
+// Package cards contains the gRPC handler for card generation service.
+package cards
 
 import (
 	"github.com/not-hype-pruduction/bridge-backend/internal/domain/ports/inbound"
