@@ -1,0 +1,137 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: registry.nhprod.ru
+  IMAGE_NAME: card-generator
+  GO_VERSION: '1.25'
+
+jobs:
+  lint:
+    name: Lint & Format
+    runs-on: [self-hosted, linux, golang]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env. GO_VERSION }}
+          cache: true
+      
+      - name: Check gofmt
+        run: |
+          echo "Checking gofmt..."
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "❌ These files are not formatted:"
+            echo "$unformatted"
+            exit 1
+          fi
+          echo "✅ All files are formatted correctly"
+      
+      - name: Run go vet
+        run: |
+          echo "Running go vet..."
+          go vet ./...
+      
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: latest
+          args: --timeout=5m
+
+  test:
+    name: Run Tests
+    runs-on: [self-hosted, linux, golang]
+    needs: lint
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      
+      - name: Download dependencies
+        run: go mod download
+      
+      - name: Run tests
+        run: |
+          go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+      
+      - name: Generate coverage report
+        run: |
+          go tool cover -func=coverage.out
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}')
+          echo "📊 Total coverage: $COVERAGE"
+      
+  build:
+    name: Build & Push Image
+    runs-on: [self-hosted, linux, golang]
+    needs: test
+    if: github.event_name != 'pull_request'
+    
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
+      image_digest: ${{ steps.build.outputs.digest }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env. GO_VERSION }}
+          cache: true
+      
+      - name: Build Go binary
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+          go build -ldflags="-w -s" -o app ./cmd/app
+          
+          echo "✅ Binary built successfully"
+          ls -lh app
+      
+      - name: Generate image metadata
+        id: meta
+        run: |
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            TAGS="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+            TAGS="$TAGS,${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${SHORT_SHA}"
+          else
+            BRANCH=$(echo ${{ github.ref }} | sed 's/refs\/heads\///')
+            TAGS="${{ env.REGISTRY }}/${{ env. IMAGE_NAME }}:${BRANCH}-${SHORT_SHA}"
+          fi
+          
+          echo "tags=$TAGS" >> $GITHUB_OUTPUT
+          echo "📦 Image tags: $TAGS"
+      
+      - name: Build and push image with Kaniko
+        id: build
+        uses: aevea/action-kaniko@master
+        with:
+          image: ${{ env.IMAGE_NAME }}
+          registry: ${{ env.REGISTRY }}
+          tag: ${{ steps.meta.outputs.tags }}
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+          cache: true
+          cache_registry: ${{ env.REGISTRY }}/cache
+          build_args: |
+            VERSION=${{ github.sha }}
+            BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
