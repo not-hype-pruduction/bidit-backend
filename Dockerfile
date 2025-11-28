@@ -25,6 +25,6 @@ RUN apk update && apk add --no-cache ca-certificates libc6-compat openssh bash &
 WORKDIR /opt
 
 COPY --from=builder /opt/bin/application ./
-COPY --from=builder /opt/internal/config/config_local.yaml ./
+COPY --from=builder /opt/internal/infrastructure/config/config_local.yaml ./
 
 CMD ["./application"]
