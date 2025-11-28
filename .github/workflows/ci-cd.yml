@@ -9,13 +9,13 @@ on:
 
 env:
   REGISTRY: registry.nhprod.ru
-  IMAGE_NAME: card-generator
+  IMAGE_NAME: bridge-backend
   GO_VERSION: '1.25'
 
 jobs:
   lint:
     name: Lint & Format
-    runs-on: [self-hosted, linux, golang]
+    runs-on: [self-hosted, linux, general]
     
     steps:
       - name: Checkout code
@@ -24,7 +24,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ env. GO_VERSION }}
+          go-version: ${{ env.GO_VERSION }}
           cache: true
       
       - name: Check gofmt
@@ -51,7 +51,7 @@ jobs:
 
   test:
     name: Run Tests
-    runs-on: [self-hosted, linux, golang]
+    runs-on: [self-hosted, linux, general]
     needs: lint
     
     steps:
@@ -79,7 +79,7 @@ jobs:
       
   build:
     name: Build & Push Image
-    runs-on: [self-hosted, linux, golang]
+    runs-on: [self-hosted, linux, general]
     needs: test
     if: github.event_name != 'pull_request'
     
@@ -94,7 +94,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ env. GO_VERSION }}
+          go-version: ${{ env.GO_VERSION }}
           cache: true
       
       - name: Build Go binary
