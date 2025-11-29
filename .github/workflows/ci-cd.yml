@@ -79,7 +79,7 @@ jobs:
     
     outputs:
       image_tag: ${{ steps.meta.outputs.image_tag }}
-      image_digest: ${{ steps.build.outputs.digest }}
+      image_digest: ${{ steps.build.outputs. digest }}
     
     steps:
       - name: Checkout code
@@ -106,11 +106,11 @@ jobs:
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
           
           if [ "${{ github. ref }}" == "refs/heads/main" ]; then
-            IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
-            IMAGE_TAG_SHA="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${SHORT_SHA}"
+            IMAGE_TAG="${{ env. REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+            IMAGE_TAG_SHA="${{ env. REGISTRY }}/${{ env.IMAGE_NAME }}:${SHORT_SHA}"
           else
             BRANCH=$(echo ${{ github.ref }} | sed 's/refs\/heads\///')
-            IMAGE_TAG="${{ env. REGISTRY }}/${{ env.IMAGE_NAME }}:${BRANCH}-${SHORT_SHA}"
+            IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${BRANCH}-${SHORT_SHA}"
             IMAGE_TAG_SHA=""
           fi
           
@@ -120,52 +120,66 @@ jobs:
           echo "📦 Image tag: ${IMAGE_TAG}"
           [ -n "${IMAGE_TAG_SHA}" ] && echo "📦 Additional tag: ${IMAGE_TAG_SHA}"
       
-      - name: Install Buildah
+      - name: Install Docker CLI
         run: |
-          if ! command -v buildah &> /dev/null; then
-            echo "Installing Buildah..."
-            sudo apt-get update
-            sudo apt-get install -y buildah
+          if ! command -v docker &> /dev/null; then
+            echo "Installing Docker CLI..."
+            curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-27.0.0. tgz | \
+              tar xzf - --strip-components=1 -C /tmp docker/docker
+            sudo mv /tmp/docker /usr/local/bin/docker
+            sudo chmod +x /usr/local/bin/docker
           else
-            echo "✅ Buildah already installed"
-            buildah --version
+            echo "✅ Docker already installed"
           fi
+          docker --version
       
       - name: Login to registry
         run: |
           echo "${{ secrets.REGISTRY_PASSWORD }}" | \
-            buildah login \
-              --username "${{ secrets.REGISTRY_USER }}" \
+            docker login \
+              --username "${{ secrets. REGISTRY_USER }}" \
               --password-stdin \
               ${{ env.REGISTRY }}
       
-      - name: Build image with Buildah
+      - name: Build image with Docker
         id: build
         run: |
           BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
           
-          buildah bud \
-            --format docker \
-            --layers \
+          docker build \
             --build-arg VERSION=${{ github.sha }} \
             --build-arg BUILD_DATE=${BUILD_DATE} \
-            --tag ${{ steps.meta.outputs.image_tag }} \
-            $([ -n "${{ steps.meta.outputs.image_tag_sha }}" ] && echo "--tag ${{ steps.meta.outputs.image_tag_sha }}") \
+            --tag ${{ steps.meta. outputs.image_tag }} \
             --file Dockerfile \
-            .
+            . 
+          
+          if [ -n "${{ steps.meta.outputs.image_tag_sha }}" ]; then
+            docker tag ${{ steps.meta.outputs. image_tag }} ${{ steps. meta.outputs.image_tag_sha }}
+            echo "📦 Additional tag: ${{ steps.meta. outputs.image_tag_sha }}"
+          fi
           
           echo "✅ Image built successfully"
           
-          DIGEST=$(buildah images --format '{{. Digest}}' ${{ steps.meta.outputs.image_tag }})
-          echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
-          echo "📦 Image digest: ${DIGEST}"
+          IMAGE_ID=$(docker images --format "{{. ID}}" ${{ steps.meta.outputs.image_tag }})
+          echo "digest=${IMAGE_ID}" >> $GITHUB_OUTPUT
+          echo "📦 Image ID: ${IMAGE_ID}"
       
       - name: Push image to registry
         run: |
-          buildah push ${{ steps.meta.outputs.image_tag }}
+          docker push ${{ steps.meta.outputs.image_tag }}
           echo "✅ Pushed: ${{ steps.meta.outputs.image_tag }}"
           
           if [ -n "${{ steps.meta.outputs.image_tag_sha }}" ]; then
-            buildah push ${{ steps.meta.outputs.image_tag_sha }}
+            docker push ${{ steps.meta.outputs.image_tag_sha }}
             echo "✅ Pushed: ${{ steps.meta.outputs.image_tag_sha }}"
           fi
+          
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${{ steps.meta.outputs.image_tag }} | cut -d'@' -f2)
+          echo "📦 Final digest: ${DIGEST}"
+      
+      - name: Cleanup
+        if: always()
+        run: |
+          docker rmi ${{ steps.meta.outputs.image_tag }} 2>/dev/null || true
+          [ -n "${{ steps.meta. outputs.image_tag_sha }}" ] && docker rmi ${{ steps.meta.outputs.image_tag_sha }} 2>/dev/null || true
+          echo "✅ Cleanup completed"
