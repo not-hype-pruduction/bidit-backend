@@ -61,13 +61,9 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-      - name: Install build dependencies
-        run: |
-          apt-get update && apt-get install -y gcc libc6-dev || true
-
       - name: Run tests
         run: |
-          CGO_ENABLED=1 go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+          go test -v -coverprofile=coverage.out -covermode=atomic ./...
       
       - name: Generate coverage report
         run: |
