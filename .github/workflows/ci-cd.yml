@@ -89,7 +89,8 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache: true
+          cache: false
+        continue-on-error: true
       
       - name: Build Go binary
         run: |
