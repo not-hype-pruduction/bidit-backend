@@ -151,16 +151,16 @@ jobs:
             --build-arg BUILD_DATE=${BUILD_DATE} \
             --tag ${{ steps.meta. outputs.image_tag }} \
             --file Dockerfile \
-            . 
+            .
           
           if [ -n "${{ steps.meta.outputs.image_tag_sha }}" ]; then
-            docker tag ${{ steps.meta.outputs. image_tag }} ${{ steps. meta.outputs.image_tag_sha }}
-            echo "📦 Additional tag: ${{ steps.meta. outputs.image_tag_sha }}"
+            docker tag ${{ steps.meta.outputs.image_tag }} ${{ steps.meta.outputs.image_tag_sha }}
+            echo "📦 Additional tag: ${{ steps.meta.outputs.image_tag_sha }}"
           fi
           
           echo "✅ Image built successfully"
           
-          IMAGE_ID=$(docker images --format "{{. ID}}" ${{ steps.meta.outputs.image_tag }})
+          IMAGE_ID=$(docker images -q ${{ steps.meta.outputs.image_tag }})
           echo "digest=${IMAGE_ID}" >> $GITHUB_OUTPUT
           echo "📦 Image ID: ${IMAGE_ID}"
       
