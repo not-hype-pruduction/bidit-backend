@@ -144,17 +144,17 @@ func GenerateDeal(gCards GeneratedCards, dealer string) *Deal {
 
 	// Robot2 cards
 	if 4-acesIndex != 0 {
-		assignCards(&resDeal.Player2, aces, &acesIndex, 4-rand.Intn(4-acesIndex))
+		assignCards(&resDeal.Player2, aces, &acesIndex, 4)
 	}
 	if 4-kingsIndex != 0 {
-		assignCards(&resDeal.Player2, kings, &kingsIndex, 4-rand.Intn(4-kingsIndex))
+		assignCards(&resDeal.Player2, kings, &kingsIndex, 4)
 	}
 
 	if 4-queensIndex != 0 {
-		assignCards(&resDeal.Player2, queens, &queensIndex, 4-rand.Intn(4-queensIndex))
+		assignCards(&resDeal.Player2, queens, &queensIndex, 4)
 	}
 	if 4-jacksIndex != 0 {
-		assignCards(&resDeal.Player2, jacks, &jacksIndex, 4-rand.Intn(4-jacksIndex))
+		assignCards(&resDeal.Player2, jacks, &jacksIndex, 4)
 	}
 
 	// Numbers for all players
