@@ -9,7 +9,7 @@ on:
 
 env:
   REGISTRY: registry.nhprod.ru
-  IMAGE_NAME: bridge-backend
+  IMAGE_NAME: bidit-backend
   GO_VERSION: '1.25'
 
 jobs:
