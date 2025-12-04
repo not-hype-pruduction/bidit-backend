@@ -15,10 +15,7 @@ env:
 jobs:
   lint:
     name: Lint & Format
-    runs-on:
-      - arc-runner-set
-      - self-hosted
-      - linux
+    runs-on: arc-runner-set
     
     steps:
       - name: Checkout code
@@ -48,10 +45,7 @@ jobs:
 
   test:
     name: Run Tests
-    runs-on:
-      - arc-runner-set
-      - self-hosted
-      - linux
+    runs-on: arc-runner-set
     needs: lint
     
     steps:
@@ -79,10 +73,7 @@ jobs:
       
   build:
     name: Build & Push Image
-    runs-on:
-      - arc-runner-set
-      - self-hosted
-      - linux
+    runs-on: arc-runner-set
     needs: test
     if: github. event_name != 'pull_request'
     
