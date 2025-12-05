@@ -223,10 +223,6 @@ jobs:
           echo "image_tag_sha=${IMAGE_TAG_SHA}" >> $GITHUB_OUTPUT
           echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
           
-          echo "🏷️  Image tags:"
-          echo "   - ${IMAGE_TAG}"
-          [ -n "${IMAGE_TAG_SHA}" ] && echo "   - ${IMAGE_TAG_SHA}"
-      
       - name: Login to registry
         run: |
           echo "🔐 Logging in to ${{ env.REGISTRY }}..."
