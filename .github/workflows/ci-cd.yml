@@ -10,26 +10,35 @@ on:
 env:
   REGISTRY: registry.nhprod.ru
   IMAGE_NAME: bidit-backend
-  GO_VERSION: '1.25'
+  GO_VERSION: '1.23'
+  DOCKER_VERSION: "27.5.0"
 
 jobs:
   lint:
     name: Lint & Format
     runs-on: arc-runner-set
     
+    container:
+      image: golang:1.25-bookworm
+      options: --user root
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - name: Setup Go cache
+        uses: actions/cache@v4
         with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: true
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
       
       - name: Check gofmt
         run: |
-          echo "Checking gofmt..."
+          echo "🔍 Checking gofmt..."
           unformatted=$(gofmt -l .)
           if [ -n "$unformatted" ]; then
             echo "❌ These files are not formatted:"
@@ -40,74 +49,170 @@ jobs:
       
       - name: Run go vet
         run: |
-          echo "Running go vet..."
-          go vet ./...
+          echo "🔍 Running go vet..."
+          go vet ./... 
+          echo "✅ go vet passed"
 
   test:
     name: Run Tests
     runs-on: arc-runner-set
     needs: lint
     
+    container:
+      image: golang:1.23-bookworm
+      options: --user root
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - name: Setup Go cache
+        uses: actions/cache@v4
         with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: true
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
       
       - name: Download dependencies
-        run: go mod download
+        run: |
+          echo "📥 Downloading dependencies..."
+          go mod download
+          echo "✅ Dependencies downloaded"
 
       - name: Run tests
         run: |
+          echo "🧪 Running tests..."
           go test -v -coverprofile=coverage.out -covermode=atomic ./...
+          echo "✅ Tests passed"
       
       - name: Generate coverage report
         run: |
+          echo "📊 Generating coverage report..."
           go tool cover -func=coverage.out
           COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}')
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "📊 Total coverage: $COVERAGE"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
       
   build:
     name: Build & Push Image
     runs-on: arc-runner-set
     needs: test
-    if: github. event_name != 'pull_request'
+    if: github.event_name != 'pull_request'
+    
+    services:
+      docker:
+        image: docker:24-dind
+        options: >-
+          --privileged
+          --health-cmd "docker info"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        env:
+          DOCKER_TLS_CERTDIR: ""
+    
+    container:
+      image: golang:1.23-bookworm
+      env:
+        DOCKER_HOST: tcp://docker:2375
+        DOCKER_DRIVER: overlay2
+        DEBIAN_FRONTEND: noninteractive
+      options: --user root
     
     outputs:
       image_tag: ${{ steps.meta.outputs.image_tag }}
-      image_digest: ${{ steps.build.outputs. digest }}
+      image_digest: ${{ steps.build.outputs.digest }}
     
     steps:
+      - name: Install Docker CLI and dependencies
+        run: |
+          apt-get update
+          apt-get install -y curl ca-certificates
+          apt-get clean
+          rm -rf /var/lib/apt/lists/*
+          
+          echo "📥 Downloading Docker CLI ${DOCKER_VERSION}..."
+          curl -fsSL "https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz" | \
+            tar -xz -C /tmp
+          
+          echo "📦 Installing Docker CLI..."
+          mv /tmp/docker/docker /usr/local/bin/docker
+          chmod +x /usr/local/bin/docker
+          rm -rf /tmp/docker
+          
+          echo "✅ Docker CLI installed:"
+          docker --version
+      
+      - name: Wait for Docker daemon
+        run: |
+          echo "⏳ Waiting for Docker daemon to be ready..."
+          for i in $(seq 1 30); do
+            if docker info >/dev/null 2>&1; then
+              echo "✅ Docker daemon is ready"
+              docker version
+              break
+            fi
+            echo "   Attempt $i/30..."
+            sleep 2
+          done
+          
+          if !  docker info >/dev/null 2>&1; then
+            echo "❌ Docker daemon failed to start"
+            exit 1
+          fi
+      
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - name: Verify Go installation
+        run: |
+          echo "🐹 Go version:"
+          go version
+          echo ""
+          echo "GOROOT=$(go env GOROOT)"
+          echo "GOPATH=$(go env GOPATH)"
+      
+      - name: Setup Go cache
+        uses: actions/cache@v4
         with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: false
-        continue-on-error: true
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      
+      - name: Download dependencies
+        run: |
+          echo "📥 Downloading dependencies..."
+          go mod download
+          echo "✅ Dependencies downloaded"
       
       - name: Build Go binary
         run: |
+          echo "🔨 Building Go binary..."
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-          go build -ldflags="-w -s" -o app ./cmd/app
+          go build -ldflags="-w -s -X main.version=${{ github.sha }} -X main.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+          -o app ./cmd/app
           
+          echo ""
           echo "✅ Binary built successfully"
           ls -lh app
+          file app
       
       - name: Generate image metadata
         id: meta
         run: |
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
           
-          if [ "${{ github. ref }}" == "refs/heads/main" ]; then
-            IMAGE_TAG="${{ env. REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
-            IMAGE_TAG_SHA="${{ env. REGISTRY }}/${{ env.IMAGE_NAME }}:${SHORT_SHA}"
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+            IMAGE_TAG_SHA="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${SHORT_SHA}"
           else
             BRANCH=$(echo ${{ github.ref }} | sed 's/refs\/heads\///')
             IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${BRANCH}-${SHORT_SHA}"
@@ -117,48 +222,46 @@ jobs:
           echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "image_tag_sha=${IMAGE_TAG_SHA}" >> $GITHUB_OUTPUT
           echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
-          echo "📦 Image tag: ${IMAGE_TAG}"
-          [ -n "${IMAGE_TAG_SHA}" ] && echo "📦 Additional tag: ${IMAGE_TAG_SHA}"
-      
-      - name: Install Docker CLI
-        run: |
-          if ! command -v docker &> /dev/null; then
-            echo "Installing Docker CLI..."
-            curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-27.0.0. tgz | \
-              tar xzf - --strip-components=1 -C /tmp docker/docker
-            sudo mv /tmp/docker /usr/local/bin/docker
-            sudo chmod +x /usr/local/bin/docker
-          else
-            echo "✅ Docker already installed"
-          fi
-          docker --version
+          
+          echo "🏷️  Image tags:"
+          echo "   - ${IMAGE_TAG}"
+          [ -n "${IMAGE_TAG_SHA}" ] && echo "   - ${IMAGE_TAG_SHA}"
       
       - name: Login to registry
         run: |
+          echo "🔐 Logging in to ${{ env.REGISTRY }}..."
           echo "${{ secrets.REGISTRY_PASSWORD }}" | \
             docker login \
-              --username "${{ secrets. REGISTRY_USER }}" \
+              --username "${{ secrets.REGISTRY_USER }}" \
               --password-stdin \
               ${{ env.REGISTRY }}
+          echo "✅ Successfully logged in"
       
-      - name: Build image with Docker
+      - name: Build Docker image
         id: build
         run: |
           BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
           
+          echo "🔨 Building Docker image..."
+          echo "   Version: ${{ github.sha }}"
+          echo "   Build date: ${BUILD_DATE}"
+          echo ""
+          
           docker build \
             --build-arg VERSION=${{ github.sha }} \
             --build-arg BUILD_DATE=${BUILD_DATE} \
-            --tag ${{ steps.meta. outputs.image_tag }} \
+            --tag ${{ steps.meta.outputs.image_tag }} \
             --file Dockerfile \
-            .
+            . 
           
           if [ -n "${{ steps.meta.outputs.image_tag_sha }}" ]; then
+            echo ""
+            echo "🏷️  Tagging with SHA: ${{ steps.meta.outputs.image_tag_sha }}"
             docker tag ${{ steps.meta.outputs.image_tag }} ${{ steps.meta.outputs.image_tag_sha }}
-            echo "📦 Additional tag: ${{ steps.meta.outputs.image_tag_sha }}"
           fi
           
-          echo "✅ Image built successfully"
+          echo ""
+          echo "✅ Docker image built successfully"
           
           IMAGE_ID=$(docker images -q ${{ steps.meta.outputs.image_tag }})
           echo "digest=${IMAGE_ID}" >> $GITHUB_OUTPUT
@@ -166,20 +269,38 @@ jobs:
       
       - name: Push image to registry
         run: |
+          echo "🚀 Pushing ${{ steps.meta.outputs.image_tag }}..."
           docker push ${{ steps.meta.outputs.image_tag }}
-          echo "✅ Pushed: ${{ steps.meta.outputs.image_tag }}"
+          echo "✅ Pushed successfully"
           
           if [ -n "${{ steps.meta.outputs.image_tag_sha }}" ]; then
+            echo ""
+            echo "🚀 Pushing ${{ steps.meta.outputs.image_tag_sha }}..."
             docker push ${{ steps.meta.outputs.image_tag_sha }}
-            echo "✅ Pushed: ${{ steps.meta.outputs.image_tag_sha }}"
+            echo "✅ Pushed successfully"
           fi
           
-          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${{ steps.meta.outputs.image_tag }} | cut -d'@' -f2)
+          echo ""
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${{ steps.meta.outputs.image_tag }} 2>/dev/null | cut -d'@' -f2 || echo "N/A")
           echo "📦 Final digest: ${DIGEST}"
       
-      - name: Cleanup
+      - name: Image info
+        run: |
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ Successfully pushed images:"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📦 ${{ steps.meta.outputs.image_tag }}"
+          if [ -n "${{ steps.meta.outputs.image_tag_sha }}" ]; then
+            echo "📦 ${{ steps.meta.outputs.image_tag_sha }}"
+          fi
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      
+      - name: Cleanup Docker
         if: always()
         run: |
+          echo "🧹 Cleaning up Docker resources..."
           docker rmi ${{ steps.meta.outputs.image_tag }} 2>/dev/null || true
-          [ -n "${{ steps.meta. outputs.image_tag_sha }}" ] && docker rmi ${{ steps.meta.outputs.image_tag_sha }} 2>/dev/null || true
-          echo "✅ Cleanup completed"
+          [ -n "${{ steps.meta.outputs.image_tag_sha }}" ] && docker rmi ${{ steps.meta.outputs.image_tag_sha }} 2>/dev/null || true
+          docker system prune -f || true
+          echo "✅ Cleanup done"
