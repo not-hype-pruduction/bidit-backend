@@ -204,8 +204,6 @@ jobs:
           
           echo ""
           echo "✅ Binary built successfully"
-          ls -lh app
-          file app
       
       - name: Generate image metadata
         id: meta
