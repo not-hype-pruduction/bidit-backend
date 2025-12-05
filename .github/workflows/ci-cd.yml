@@ -26,16 +26,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Setup Go cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-      
       - name: Check gofmt
         run: |
           echo "🔍 Checking gofmt..."
@@ -65,16 +55,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      - name: Setup Go cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
       
       - name: Download dependencies
         run: |
@@ -176,16 +156,6 @@ jobs:
           echo ""
           echo "GOROOT=$(go env GOROOT)"
           echo "GOPATH=$(go env GOPATH)"
-      
-      - name: Setup Go cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
       
       - name: Download dependencies
         run: |
