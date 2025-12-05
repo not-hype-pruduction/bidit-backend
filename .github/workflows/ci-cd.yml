@@ -59,7 +59,7 @@ jobs:
     needs: lint
     
     container:
-      image: golang:1.23-bookworm
+      image: golang:1.25-bookworm
       options: --user root
     
     steps:
@@ -117,7 +117,7 @@ jobs:
           DOCKER_TLS_CERTDIR: ""
     
     container:
-      image: golang:1.23-bookworm
+      image: golang:1.25-bookworm
       env:
         DOCKER_HOST: tcp://docker:2375
         DOCKER_DRIVER: overlay2
