@@ -7,4 +7,5 @@ generate:
 		-I $$PROTO_PATH \
 		--go_out=$(OUT_DIR) \
 		--go-grpc_out=$(OUT_DIR) \
-		$$PROTO_PATH/cards/v1/cards.proto
+		$$PROTO_PATH/cards/v1/cards.proto \
+		$$PROTO_PATH/biding/v1/biding.proto

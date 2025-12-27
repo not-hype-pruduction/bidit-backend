@@ -19,6 +19,16 @@ github.com/ilyakaznacheev/cleanenv v1.5.0 h1:0VNZXggJE2OYdXE87bfSSwGxeiGt9moSR2l
 github.com/ilyakaznacheev/cleanenv v1.5.0/go.mod h1:a5aDzaJrLCQZsazHol1w8InnDcOX0OColm64SlIi6gk=
 github.com/joho/godotenv v1.5.1 h1:7eLL/+HRGLY0ldzfGMeQkb7vMd0as4CfYvUVzLqw0N0=
 github.com/joho/godotenv v1.5.1/go.mod h1:f4LDr5Voq0i2e/R5DDNOoa2zzDfwtkZa6DnEwAbqwq4=
+github.com/not-hype-pruduction/bridge-protos v1.0.5-0.20251223153757-eaffab9eb0fc h1:z/P8+LUHY/60z3o3iTgaugnDe0AvQ3EFwhjDwBh71BA=
+github.com/not-hype-pruduction/bridge-protos v1.0.5-0.20251223153757-eaffab9eb0fc/go.mod h1:54AtUMS47NHz19FX4yCd2j4HpMt2hvCeK9L2mtQlXTY=
+github.com/not-hype-pruduction/bridge-protos v1.0.5-0.20251224004816-c24ad5262355 h1:2Gc5pq+ufyLee0SPQypGUqK4w+eXJphDoDrXyZ23bJU=
+github.com/not-hype-pruduction/bridge-protos v1.0.5-0.20251224004816-c24ad5262355/go.mod h1:54AtUMS47NHz19FX4yCd2j4HpMt2hvCeK9L2mtQlXTY=
+github.com/not-hype-pruduction/bridge-protos v1.0.5-0.20251224015248-554f3ed49f15 h1:9gxySjBDiRcJsYoGYaYMsKPOGKFEwl85o1K/nv48ZGs=
+github.com/not-hype-pruduction/bridge-protos v1.0.5-0.20251224015248-554f3ed49f15/go.mod h1:54AtUMS47NHz19FX4yCd2j4HpMt2hvCeK9L2mtQlXTY=
+github.com/not-hype-pruduction/bridge-protos v1.0.5-0.20251225163236-b7b355610e50 h1:uUb9D0uK2C8jkednclwbb1I45QOaLusygED2rLCFIOA=
+github.com/not-hype-pruduction/bridge-protos v1.0.5-0.20251225163236-b7b355610e50/go.mod h1:54AtUMS47NHz19FX4yCd2j4HpMt2hvCeK9L2mtQlXTY=
+github.com/not-hype-pruduction/bridge-protos v1.0.5-0.20251226135630-94cb11e44b91 h1:jhPwkbOOg75shC0vO637xX/c6JKd2JiqvLWf6X/EUm0=
+github.com/not-hype-pruduction/bridge-protos v1.0.5-0.20251226135630-94cb11e44b91/go.mod h1:54AtUMS47NHz19FX4yCd2j4HpMt2hvCeK9L2mtQlXTY=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=

@@ -12,6 +12,7 @@ require (
 require (
 	github.com/BurntSushi/toml v1.5.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
+	github.com/not-hype-pruduction/bridge-protos v1.0.5-0.20251226135630-94cb11e44b91 // indirect
 	golang.org/x/net v0.46.1-0.20251013234738-63d1a5100f82 // indirect
 	golang.org/x/sys v0.37.0 // indirect
 	golang.org/x/text v0.30.0 // indirect
