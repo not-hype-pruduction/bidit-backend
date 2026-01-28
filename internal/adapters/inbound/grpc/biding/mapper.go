@@ -46,7 +46,7 @@ func ToMakeBidResponse(bid *biding.Call) *bidingv1.MakeBidResponse {
 			Type:        bidingv1.SpecialCall(bidType),
 			Level:       int32(bid.Level),
 			Suit:        bidingv1.Suit(bid.Suit),
-			Explanation: "heheheheheh",
+			Explanation: bid.Explanation,
 		},
 	}
 }

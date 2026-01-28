@@ -11,9 +11,10 @@ const (
 )
 
 type Call struct {
-	Level int
-	Suit  Suit
-	Type  string // PASS, DOUBLE, REDOUBLE, BID
+	Level       int
+	Suit        Suit
+	Type        string // PASS, DOUBLE, REDOUBLE, BID
+	Explanation string
 }
 
 type BidState struct {

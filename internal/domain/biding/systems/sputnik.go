@@ -7,13 +7,29 @@ import (
 	"github.com/not-hype-pruduction/bridge-backend/internal/lib/utils"
 )
 
-type SputnikStandard struct{}
+type Language string
+
+const (
+	RU Language = "ru"
+	EN Language = "en"
+)
+
+type SputnikStandard struct {
+	Lang Language
+}
 
 func (s *SputnikStandard) Name() string {
 	return "SYSTEM_SPUTNIK"
 }
 
-// handAnalysis содержит посчитанные параметры руки
+// вспомогательный метод для выбора текста
+func (s *SputnikStandard) msg(ru, en string) string {
+	if s.Lang == EN {
+		return en
+	}
+	return ru
+}
+
 type handAnalysis struct {
 	hcp    int
 	counts map[biding.Suit]int
@@ -23,116 +39,107 @@ func (s *SputnikStandard) GetBid(ctx context.Context, in biding.BidState) (bidin
 	analysis := s.analyze(utils.PBNToSlice(in.Hand))
 	history := in.AuctionHistory
 
-	// 1. Если мы открываем (никто еще не заявлялся кроме Паса)
 	if s.isOpening(history) {
 		return s.open(analysis), nil
 	}
 
-	// 2. Если партнер открылся, а оппоненты пасуют (Ответы)
 	if len(history) >= 1 && s.partnerOpened(history) {
 		partnerOpening := s.getLastNonPassBid(history)
 		return s.respond(analysis, partnerOpening, history), nil
 	}
 
-	// По умолчанию ПАС
-	return biding.Call{Type: "PASS"}, nil
+	return biding.Call{Type: "PASS", Explanation: s.msg("Пас", "Pass")}, nil
 }
 
-// --- ЛОГИКА ОТКРЫТИЙ (Таблица 1) ---
+// --- ЛОГИКА ОТКРЫТИЙ ---
 
 func (s *SputnikStandard) open(info handAnalysis) biding.Call {
 	hcp := info.hcp
 
-	// 2БК: 20-21, равномерная
+	// 2БК: 20-21
 	if hcp >= 20 && hcp <= 21 && s.isBalanced(info) {
-		return biding.Call{Level: 2, Suit: biding.NoTrump, Type: "BID"}
+		return biding.Call{
+			Level: 2, Suit: biding.NoTrump, Type: "BID",
+			Explanation: s.msg("20-21 очков, равномерный расклад", "20-21 HCP, balanced hand"),
+		}
 	}
 
-	// 2К: 22+ очков, любая рука (ФГ)
+	// 2К: 22+
 	if hcp >= 22 {
-		return biding.Call{Level: 2, Suit: biding.Clubs, Type: "BID"}
+		return biding.Call{
+			Level: 2, Suit: biding.Clubs, Type: "BID",
+			Explanation: s.msg("Сильное открытие 22+ очков, форсинг гейм", "Strong opening 22+ HCP, Game Forcing"),
+		}
 	}
 
-	// 1БК: 15-17, равномерная, нет мажора 5+
+	// 1БК: 15-17
 	if hcp >= 15 && hcp <= 17 && s.isBalanced(info) && info.counts[biding.Spades] < 5 && info.counts[biding.Hearts] < 5 {
-		return biding.Call{Level: 1, Suit: biding.NoTrump, Type: "BID"}
+		return biding.Call{
+			Level: 1, Suit: biding.NoTrump, Type: "BID",
+			Explanation: s.msg("15-17 очков, равномерный расклад", "15-17 HCP, balanced hand"),
+		}
 	}
 
-	// Блоки на 3 и 4 уровне (5-9 очков)
+	// Блоки 3-4 уровня
 	if hcp >= 5 && hcp <= 9 {
 		for _, suit := range []biding.Suit{biding.Spades, biding.Hearts, biding.Diamonds, biding.Clubs} {
-			if info.counts[suit] == 8 {
-				return biding.Call{Level: 4, Suit: suit, Type: "BID"}
-			}
-			if info.counts[suit] == 7 {
-				return biding.Call{Level: 3, Suit: suit, Type: "BID"}
+			if info.counts[suit] >= 7 {
+				level := 3
+				if info.counts[suit] >= 8 {
+					level = 4
+				}
+				return biding.Call{
+					Level: level, Suit: suit, Type: "BID",
+					Explanation: s.msg("Блок: длинная масть, 5-9 очков", "Preemptive: long suit, 5-9 HCP"),
+				}
 			}
 		}
 	}
 
-	// Слабые 2 (5-10 очков, 6 карт)
+	// Слабые 2
 	if hcp >= 5 && hcp <= 10 {
 		for _, suit := range []biding.Suit{biding.Spades, biding.Hearts, biding.Diamonds} {
 			if info.counts[suit] == 6 {
-				return biding.Call{Level: 2, Suit: suit, Type: "BID"}
+				return biding.Call{
+					Level: 2, Suit: suit, Type: "BID",
+					Explanation: s.msg("Слабое открытие: 6 карт, 5-10 очков", "Weak 2 opening: 6 cards, 5-10 HCP"),
+				}
 			}
 		}
 	}
 
-	// Открытия от 12 очков
+	// Открытия 1 масть (12-21)
 	if hcp >= 12 {
-		// Мажоры от 5 карт (Пика приоритетнее при 5-5)
 		if info.counts[biding.Spades] >= 5 {
-			return biding.Call{Level: 1, Suit: biding.Spades, Type: "BID"}
+			return biding.Call{Level: 1, Suit: biding.Spades, Type: "BID", Explanation: s.msg("5+ пик, 12-21 очков", "5+ Spades, 12-21 HCP")}
 		}
 		if info.counts[biding.Hearts] >= 5 {
-			return biding.Call{Level: 1, Suit: biding.Hearts, Type: "BID"}
+			return biding.Call{Level: 1, Suit: biding.Hearts, Type: "BID", Explanation: s.msg("5+ черв, 12-21 очков", "5+ Hearts, 12-21 HCP")}
 		}
 
-		// Миноры (3+ карты)
-		// Правило: 1Бубна если 4-4 в минорах (больше очков в бубне) или 3бубны-2трефы
 		dCount := info.counts[biding.Diamonds]
 		cCount := info.counts[biding.Clubs]
-
-		if dCount > cCount {
-			return biding.Call{Level: 1, Suit: biding.Diamonds, Type: "BID"}
+		if dCount >= 3 && (dCount > cCount || (dCount == 3 && cCount == 2)) {
+			return biding.Call{Level: 1, Suit: biding.Diamonds, Type: "BID", Explanation: s.msg("3+ бубен, натуральное открытие", "3+ Diamonds, natural opening")}
 		}
-		if dCount == cCount && dCount >= 4 {
-			// В системе Спутник при 4-4 в минорах выбор зависит от качества,
-			// упростим: 1Т при 4-4, если не указано иное
-			return biding.Call{Level: 1, Suit: biding.Clubs, Type: "BID"}
-		}
-		if dCount == 3 && cCount == 3 {
-			return biding.Call{Level: 1, Suit: biding.Clubs, Type: "BID"}
-		}
-		if dCount == 3 && cCount == 2 {
-			return biding.Call{Level: 1, Suit: biding.Diamonds, Type: "BID"}
-		}
-
-		return biding.Call{Level: 1, Suit: biding.Clubs, Type: "BID"}
+		return biding.Call{Level: 1, Suit: biding.Clubs, Type: "BID", Explanation: s.msg("3+ треф, натуральное открытие", "3+ Clubs, natural opening")}
 	}
 
 	return biding.Call{Type: "PASS"}
 }
 
-// --- ЛОГИКА ОТВЕТОВ (Таблицы 2, 3, 4) ---
+// --- ЛОГИКА ОТВЕТОВ ---
 
 func (s *SputnikStandard) respond(info handAnalysis, opening biding.Call, history []biding.Call) biding.Call {
-	// Если партнер открылся 1БК
 	if opening.Level == 1 && opening.Suit == biding.NoTrump {
 		return s.respondTo1NT(info)
 	}
-
-	// Если партнер открылся 1 в мажоре
 	if opening.Level == 1 && (opening.Suit == biding.Hearts || opening.Suit == biding.Spades) {
 		return s.respondToMajor(info, opening)
 	}
-
-	// Если партнер открылся 1 в миноре
 	if opening.Level == 1 && (opening.Suit == biding.Clubs || opening.Suit == biding.Diamonds) {
 		return s.respondToMinor(info, opening)
 	}
-
 	return biding.Call{Type: "PASS"}
 }
 
@@ -141,23 +148,20 @@ func (s *SputnikStandard) respondToMinor(info handAnalysis, opening biding.Call)
 		return biding.Call{Type: "PASS"}
 	}
 
-	// Ответы 1 в мажоре (4+ карты, приоритет Черве при 4-4)
+	// 1 в мажоре
 	if info.counts[biding.Hearts] >= 4 && (info.counts[biding.Hearts] >= info.counts[biding.Spades] || info.counts[biding.Spades] < 4) {
-		return biding.Call{Level: 1, Suit: biding.Hearts, Type: "BID"}
+		return biding.Call{Level: 1, Suit: biding.Hearts, Type: "BID", Explanation: s.msg("6+ очков, 4+ черви, Ф1", "6+ HCP, 4+ Hearts, F1")}
 	}
 	if info.counts[biding.Spades] >= 4 {
-		return biding.Call{Level: 1, Suit: biding.Spades, Type: "BID"}
+		return biding.Call{Level: 1, Suit: biding.Spades, Type: "BID", Explanation: s.msg("6+ очков, 4+ пики, Ф1", "6+ HCP, 4+ Spades, F1")}
 	}
 
 	// БК ответы
 	if info.hcp >= 6 && info.hcp <= 9 && s.isBalanced(info) {
-		return biding.Call{Level: 1, Suit: biding.NoTrump, Type: "BID"}
+		return biding.Call{Level: 1, Suit: biding.NoTrump, Type: "BID", Explanation: s.msg("6-9 очков, равномерный расклад", "6-9 HCP, balanced hand")}
 	}
 	if info.hcp >= 10 && info.hcp <= 11 && s.isBalanced(info) {
-		return biding.Call{Level: 2, Suit: biding.NoTrump, Type: "BID"}
-	}
-	if info.hcp >= 12 && info.hcp <= 15 && s.isBalanced(info) {
-		return biding.Call{Level: 3, Suit: biding.NoTrump, Type: "BID"}
+		return biding.Call{Level: 2, Suit: biding.NoTrump, Type: "BID", Explanation: s.msg("10-11 очков, инвит к 3БК", "10-11 HCP, invite to 3NT")}
 	}
 
 	return biding.Call{Type: "PASS"}
@@ -168,73 +172,54 @@ func (s *SputnikStandard) respondToMajor(info handAnalysis, opening biding.Call)
 		return biding.Call{Type: "PASS"}
 	}
 
-	// Фит в мажоре партнера (3+ карты)
+	// Фит
 	if info.counts[opening.Suit] >= 3 {
 		if info.hcp >= 6 && info.hcp <= 9 {
-			return biding.Call{Level: 2, Suit: opening.Suit, Type: "BID"}
+			return biding.Call{Level: 2, Suit: opening.Suit, Type: "BID", Explanation: s.msg("6-9 очков, поддержка (фит)", "6-9 HCP, support (fit)")}
 		}
-		// Инвит 10-11 (через 2БК или форсирующий БК в зависимости от вариации,
-		// по PDF: 3 в мажор = инвит)
 		if info.hcp >= 10 && info.hcp <= 11 {
-			return biding.Call{Level: 3, Suit: opening.Suit, Type: "BID"}
+			return biding.Call{Level: 3, Suit: opening.Suit, Type: "BID", Explanation: s.msg("10-11 очков, инвит к гейму", "10-11 HCP, game invite")}
 		}
 	}
 
-	// 1 Пика на 1 Черву
-	if opening.Suit == biding.Hearts && info.counts[biding.Spades] >= 4 {
-		return biding.Call{Level: 1, Suit: biding.Spades, Type: "BID"}
-	}
-
-	// 2-в-1 ФГ (12+ очков, новая масть на 2 уровне)
+	// 2-в-1 ФГ
 	if info.hcp >= 12 {
-		if info.counts[biding.Clubs] >= 4 {
-			return biding.Call{Level: 2, Suit: biding.Clubs, Type: "BID"}
-		}
-		if info.counts[biding.Diamonds] >= 4 {
-			return biding.Call{Level: 2, Suit: biding.Diamonds, Type: "BID"}
-		}
+		return biding.Call{Level: 2, Suit: biding.Clubs, Type: "BID", Explanation: s.msg("12+ очков, форсинг гейм", "12+ HCP, Game Forcing")}
 	}
 
-	// 1БК (6-9 очков, не форсирующий по системе Спутник-Стандарт)
-	return biding.Call{Level: 1, Suit: biding.NoTrump, Type: "BID"}
+	return biding.Call{Level: 1, Suit: biding.NoTrump, Type: "BID", Explanation: s.msg("6-9 очков, нет фита", "6-9 HCP, no fit")}
 }
 
 func (s *SputnikStandard) respondTo1NT(info handAnalysis) biding.Call {
-	// Стейман (8+ очков, есть 4-ка в мажоре)
+	// Стейман
 	if info.hcp >= 8 && (info.counts[biding.Hearts] == 4 || info.counts[biding.Spades] == 4) {
-		return biding.Call{Level: 2, Suit: biding.Clubs, Type: "BID"}
+		return biding.Call{Level: 2, Suit: biding.Clubs, Type: "BID", Explanation: s.msg("Стейман: запрос мажорных четверок", "Stayman: asking for 4-card majors")}
 	}
 
-	// Трансферы (от 0 очков, 5+ в мажоре)
+	// Трансферы
 	if info.counts[biding.Hearts] >= 5 {
-		return biding.Call{Level: 2, Suit: biding.Diamonds, Type: "BID"} // Трансфер в Черву
+		return biding.Call{Level: 2, Suit: biding.Diamonds, Type: "BID", Explanation: s.msg("Трансфер в черву", "Transfer to Hearts")}
 	}
 	if info.counts[biding.Spades] >= 5 {
-		return biding.Call{Level: 2, Suit: biding.Hearts, Type: "BID"} // Трансфер в Пику
+		return biding.Call{Level: 2, Suit: biding.Hearts, Type: "BID", Explanation: s.msg("Трансфер в пику", "Transfer to Spades")}
 	}
 
-	// Инвит в 3БК (8-9 очков)
-	if info.hcp >= 8 && info.hcp <= 9 {
-		return biding.Call{Level: 2, Suit: biding.NoTrump, Type: "BID"}
-	}
-
-	// Гейм 3БК (10-15 очков)
-	if info.hcp >= 10 && info.hcp <= 15 {
-		return biding.Call{Level: 3, Suit: biding.NoTrump, Type: "BID"}
+	if info.hcp >= 10 {
+		return biding.Call{Level: 3, Suit: biding.NoTrump, Type: "BID", Explanation: s.msg("10+ очков, постановка гейма", "10+ HCP, bidding game")}
 	}
 
 	return biding.Call{Type: "PASS"}
 }
+
+// --- ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ---
 
 func (s *SputnikStandard) analyze(cards []string) handAnalysis {
 	info := handAnalysis{counts: make(map[biding.Suit]int)}
 	weights := map[string]int{"A": 4, "K": 3, "Q": 2, "J": 1}
 
 	for _, card := range cards {
-		// Формат "SA" (Spades Ace), "H10" (Hearts 10)
 		suitChar := string(card[0])
 		rank := card[1:]
-
 		var suit biding.Suit
 		switch suitChar {
 		case "S":
@@ -246,7 +231,6 @@ func (s *SputnikStandard) analyze(cards []string) handAnalysis {
 		case "C":
 			suit = biding.Clubs
 		}
-
 		info.counts[suit]++
 		if val, ok := weights[rank]; ok {
 			info.hcp += val
@@ -256,11 +240,10 @@ func (s *SputnikStandard) analyze(cards []string) handAnalysis {
 }
 
 func (s *SputnikStandard) isBalanced(info handAnalysis) bool {
-	// Равномерная рука: нет синглетов/ренонсов, не более одного дублета
 	shortSuits := 0
 	for _, count := range info.counts {
 		if count <= 1 {
-			return false // Есть синглет или ренонс
+			return false
 		}
 		if count == 2 {
 			shortSuits++
@@ -270,9 +253,6 @@ func (s *SputnikStandard) isBalanced(info handAnalysis) bool {
 }
 
 func (s *SputnikStandard) isOpening(history []biding.Call) bool {
-	if len(history) == 0 {
-		return true
-	}
 	for _, c := range history {
 		if c.Type != "PASS" {
 			return false
@@ -282,18 +262,15 @@ func (s *SputnikStandard) isOpening(history []biding.Call) bool {
 }
 
 func (s *SputnikStandard) partnerOpened(history []biding.Call) bool {
-	// Ищем последнюю значащую заявку. Если она сделана партнером (через одного от нас)
-	// Для простоты: если в истории всего одна значащая заявка и она не наша.
 	count := 0
-	var lastBid biding.Call
+	var last biding.Call
 	for _, c := range history {
 		if c.Type == "BID" {
 			count++
-			lastBid = c
+			last = c
 		}
 	}
-	// Если мы в позиции отвечающего (ход 2 или 4)
-	return count == 1 && lastBid.Type == "BID"
+	return count == 1 && last.Type == "BID"
 }
 
 func (s *SputnikStandard) getLastNonPassBid(history []biding.Call) biding.Call {

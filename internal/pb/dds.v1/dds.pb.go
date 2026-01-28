@@ -197,7 +197,7 @@ const file_dds_v1_dds_proto_rawDesc = "" +
 	"\n" +
 	"DDSService\x12C\n" +
 	"\n" +
-	"GegDDTable\x12\x19.dds.v1.GetDDTableRequest\x1a\x1a.dds.v1.GetDDTableResponseB\x0eZ\fdds.v1;ddsv1b\x06proto3"
+	"GetDDTable\x12\x19.dds.v1.GetDDTableRequest\x1a\x1a.dds.v1.GetDDTableResponseB\x0eZ\fdds.v1;ddsv1b\x06proto3"
 
 var (
 	file_dds_v1_dds_proto_rawDescOnce sync.Once
@@ -221,8 +221,8 @@ var file_dds_v1_dds_proto_goTypes = []any{
 var file_dds_v1_dds_proto_depIdxs = []int32{
 	3, // 0: dds.v1.GetDDTableResponse.results:type_name -> dds.v1.GetDDTableResponse.ResultsEntry
 	1, // 1: dds.v1.GetDDTableResponse.ResultsEntry.value:type_name -> dds.v1.PlayerResults
-	0, // 2: dds.v1.DDSService.GegDDTable:input_type -> dds.v1.GetDDTableRequest
-	2, // 3: dds.v1.DDSService.GegDDTable:output_type -> dds.v1.GetDDTableResponse
+	0, // 2: dds.v1.DDSService.GetDDTable:input_type -> dds.v1.GetDDTableRequest
+	2, // 3: dds.v1.DDSService.GetDDTable:output_type -> dds.v1.GetDDTableResponse
 	3, // [3:4] is the sub-list for method output_type
 	2, // [2:3] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name

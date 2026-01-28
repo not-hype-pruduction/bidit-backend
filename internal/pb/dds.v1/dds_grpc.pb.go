@@ -19,14 +19,14 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	DDSService_GegDDTable_FullMethodName = "/dds.v1.DDSService/GegDDTable"
+	DDSService_GetDDTable_FullMethodName = "/dds.v1.DDSService/GetDDTable"
 )
 
 // DDSServiceClient is the client API for DDSService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type DDSServiceClient interface {
-	GegDDTable(ctx context.Context, in *GetDDTableRequest, opts ...grpc.CallOption) (*GetDDTableResponse, error)
+	GetDDTable(ctx context.Context, in *GetDDTableRequest, opts ...grpc.CallOption) (*GetDDTableResponse, error)
 }
 
 type dDSServiceClient struct {
@@ -37,10 +37,10 @@ func NewDDSServiceClient(cc grpc.ClientConnInterface) DDSServiceClient {
 	return &dDSServiceClient{cc}
 }
 
-func (c *dDSServiceClient) GegDDTable(ctx context.Context, in *GetDDTableRequest, opts ...grpc.CallOption) (*GetDDTableResponse, error) {
+func (c *dDSServiceClient) GetDDTable(ctx context.Context, in *GetDDTableRequest, opts ...grpc.CallOption) (*GetDDTableResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetDDTableResponse)
-	err := c.cc.Invoke(ctx, DDSService_GegDDTable_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DDSService_GetDDTable_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (c *dDSServiceClient) GegDDTable(ctx context.Context, in *GetDDTableRequest
 // All implementations must embed UnimplementedDDSServiceServer
 // for forward compatibility.
 type DDSServiceServer interface {
-	GegDDTable(context.Context, *GetDDTableRequest) (*GetDDTableResponse, error)
+	GetDDTable(context.Context, *GetDDTableRequest) (*GetDDTableResponse, error)
 	mustEmbedUnimplementedDDSServiceServer()
 }
 
@@ -62,8 +62,8 @@ type DDSServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedDDSServiceServer struct{}
 
-func (UnimplementedDDSServiceServer) GegDDTable(context.Context, *GetDDTableRequest) (*GetDDTableResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GegDDTable not implemented")
+func (UnimplementedDDSServiceServer) GetDDTable(context.Context, *GetDDTableRequest) (*GetDDTableResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetDDTable not implemented")
 }
 func (UnimplementedDDSServiceServer) mustEmbedUnimplementedDDSServiceServer() {}
 func (UnimplementedDDSServiceServer) testEmbeddedByValue()                    {}
@@ -86,20 +86,20 @@ func RegisterDDSServiceServer(s grpc.ServiceRegistrar, srv DDSServiceServer) {
 	s.RegisterService(&DDSService_ServiceDesc, srv)
 }
 
-func _DDSService_GegDDTable_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DDSService_GetDDTable_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetDDTableRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DDSServiceServer).GegDDTable(ctx, in)
+		return srv.(DDSServiceServer).GetDDTable(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: DDSService_GegDDTable_FullMethodName,
+		FullMethod: DDSService_GetDDTable_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DDSServiceServer).GegDDTable(ctx, req.(*GetDDTableRequest))
+		return srv.(DDSServiceServer).GetDDTable(ctx, req.(*GetDDTableRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -112,8 +112,8 @@ var DDSService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*DDSServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GegDDTable",
-			Handler:    _DDSService_GegDDTable_Handler,
+			MethodName: "GetDDTable",
+			Handler:    _DDSService_GetDDTable_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
